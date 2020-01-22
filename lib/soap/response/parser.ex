@@ -14,17 +14,17 @@ defmodule Soap.Response.Parser do
 
   If a list is empty then `parse/1` returns full parsed response structure into map.
   """
-  @spec parse(String.t(), integer()) :: map()
-  def parse(xml_response, :fault) do
-    fault_tag = get_fault_tag(xml_response)
+  @spec parse(String.t(), integer(), String.t()) :: map()
+  def parse(xml_response, :fault, version) do
+    fault_tag = get_fault_tag(xml_response, version)
 
     xml_response
     |> xpath(~x"//#{fault_tag}/*"l)
     |> parse_elements()
   end
 
-  def parse(xml_response, _response_type) do
-    body_tag = get_body_tag(xml_response)
+  def parse(xml_response, _response_type, version) do
+    body_tag = get_body_tag(xml_response, version)
 
     xml_response
     |> xpath(~x"//#{body_tag}/*"l)
@@ -79,8 +79,8 @@ defmodule Soap.Response.Parser do
     Enum.uniq(keys) == keys
   end
 
-  defp get_envelope_namespace(xml_response) do
-    env_namespace = @soap_version_namespaces[soap_version()]
+  defp get_envelope_namespace(xml_response, version) do
+    env_namespace = @soap_version_namespaces[version || soap_version()]
 
     xml_response
     |> xpath(~x"//namespace::*"l)
@@ -88,16 +88,16 @@ defmodule Soap.Response.Parser do
     |> elem(3)
   end
 
-  defp get_fault_tag(xml_response) do
+  defp get_fault_tag(xml_response, version) do
     xml_response
-    |> get_envelope_namespace()
+    |> get_envelope_namespace(version)
     |> List.to_string()
     |> apply_namespace_to_tag("Fault")
   end
 
-  defp get_body_tag(xml_response) do
+  defp get_body_tag(xml_response, version) do
     xml_response
-    |> get_envelope_namespace()
+    |> get_envelope_namespace(version)
     |> List.to_string()
     |> apply_namespace_to_tag("Body")
   end
