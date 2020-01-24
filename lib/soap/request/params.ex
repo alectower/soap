@@ -193,6 +193,12 @@ defmodule Soap.Request.Params do
       |> get_action_with_namespace(operation)
       |> prepare_action_tag(operation)
 
+    action_tag =
+      case String.starts_with?(action_tag, "tns") do
+        true -> action_tag
+        false -> "tns:#{action_tag}"
+      end
+
     [element(action_tag, action_tag_attributes, body)]
   end
 
@@ -209,7 +215,6 @@ defmodule Soap.Request.Params do
     end
   end
 
-  defp handle_element_form_default(%{target_namespace: ns, element_form_default: "qualified"}), do: %{xmlns: ns}
   defp handle_element_form_default(_schema_attributes), do: %{}
 
   defp prepare_action_tag("", operation), do: operation
@@ -275,6 +280,8 @@ defmodule Soap.Request.Params do
       |> Map.merge(build_soap_version_attribute(wsdl))
       |> Map.merge(build_action_attribute(wsdl, operation))
       |> Map.merge(custom_namespaces())
+      |> Map.merge(Map.get(wsdl, :custom_namespaces, []) |> Map.new())
+      |> Map.merge(%{"xmlns:tns" => wsdl[:schema_attributes][:target_namespace]})
 
     [element(:"#{env_namespace()}:Envelope", envelop_attributes, body)]
   end

@@ -23,11 +23,25 @@ defmodule Soap.Request.Headers do
   end
 
   @spec extract_headers(String.t(), list()) :: list()
-  defp extract_headers(soap_action, []), do: base_headers(soap_action)
-  defp extract_headers(_, custom_headers), do: custom_headers
+  defp extract_headers(soap_action, custom_headers) do
+    base_headers(soap_action)
+    |> merge_headers(custom_headers)
+  end
 
   @spec base_headers(String.t()) :: list()
   defp base_headers(soap_action) do
     [{"SOAPAction", soap_action}, {"Content-Type", "text/xml;charset=utf-8"}]
+  end
+
+  def merge_headers(x, y) do
+    Enum.map(x, fn {k, _} = c ->
+      {
+        k,
+        Enum.find(y, c, fn {k1, _} ->
+          to_string(k) == to_string(k1)
+        end)
+        |> elem(1)
+      }
+    end)
   end
 end

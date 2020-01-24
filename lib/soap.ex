@@ -111,24 +111,24 @@ defmodule Soap do
     wsdl.operations
   end
 
-  defp handle_response(
+  def handle_response(
          {:ok, %HTTPoison.Response{body: body, headers: headers, request_url: request_url, status_code: status_code}}
        ) do
     {:ok, %Response{body: body, headers: headers, request_url: request_url, status_code: status_code}}
   end
 
-  defp handle_response({:error, %HTTPoison.Error{reason: reason}}) do
+  def handle_response({:error, %HTTPoison.Error{reason: reason}}) do
     {:error, reason}
   end
 
-  defp validate_operation(wsdl, operation) do
+  def validate_operation(wsdl, operation) do
     case valid_operation?(wsdl, operation) do
       false -> raise OperationError, operation
       true -> wsdl
     end
   end
 
-  defp valid_operation?(wsdl, operation) do
+  def valid_operation?(wsdl, operation) do
     Enum.any?(wsdl[:operations], &(&1[:name] == operation))
   end
 end
