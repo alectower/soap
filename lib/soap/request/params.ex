@@ -193,12 +193,6 @@ defmodule Soap.Request.Params do
       |> get_action_with_namespace(operation)
       |> prepare_action_tag(operation)
 
-    action_tag =
-      case String.starts_with?(action_tag, "tns") do
-        true -> action_tag
-        false -> "tns:#{action_tag}"
-      end
-
     [element(action_tag, action_tag_attributes, body)]
   end
 
