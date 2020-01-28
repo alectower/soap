@@ -33,15 +33,17 @@ defmodule Soap.Request.Headers do
     [{"SOAPAction", soap_action}, {"Content-Type", "text/xml;charset=utf-8"}]
   end
 
+  def merge_headers(x, nil), do: x
+  def merge_headers(x, []), do: x
   def merge_headers(x, y) do
-    Enum.map(x, fn {k, _} = c ->
-      {
-        k,
-        Enum.find(y, c, fn {k1, _} ->
-          to_string(k) == to_string(k1)
-        end)
-        |> elem(1)
-      }
-    end)
+    Enum.reduce(x, [], fn {k, _} = c, acc->
+      Enum.find(y, fn {k1, _} ->
+        to_string(k) == to_string(k1)
+      end)
+      |> case do
+        nil -> acc ++ [c]
+        _ -> acc
+      end
+    end) ++ y
   end
 end
