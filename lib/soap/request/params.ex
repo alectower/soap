@@ -87,6 +87,9 @@ defmodule Soap.Request.Params do
   defp validate_type(_k, v, "decimal") when is_number(v), do: nil
   defp validate_type(k, _v, type = "decimal"), do: type_error_message(k, type)
 
+  defp validate_type(_k, v, "int") when is_number(v), do: nil
+  defp validate_type(k, _v, type = "int"), do: type_error_message(k, type)
+
   defp validate_type(k, v, "date") when is_binary(v) do
     case Regex.match?(~r/#{@date_type_regex}/, v) do
       true -> nil
