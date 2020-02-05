@@ -75,7 +75,7 @@ defmodule Soap.Request.Params do
     attributes = val_map[k]
     [_, type] = String.split(attributes.type, ":")
 
-    case type != "string" && Integer.parse(v) do
+    case type != "string" && !is_list(v) && Integer.parse(v) do
       {number, ""} -> validate_type(k, number, type)
       _ -> validate_type(k, v, type)
     end
@@ -109,6 +109,9 @@ defmodule Soap.Request.Params do
   end
 
   defp validate_type(k, _v, type = "dateTime"), do: type_error_message(k, type)
+
+  defp validate_type(_k, v, "accountCredential") when is_list(v), do: nil
+  defp validate_type(k, _v, type = "accountCredential"), do: type_error_message(k, type)
 
   defp build_soap_body(wsdl, operation, params) do
     case params |> construct_xml_request_body |> validate_params(wsdl, operation) do
