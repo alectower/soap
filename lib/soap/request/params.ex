@@ -110,8 +110,8 @@ defmodule Soap.Request.Params do
 
   defp validate_type(k, _v, type = "dateTime"), do: type_error_message(k, type)
 
-  defp validate_type(_k, v, "accountCredential") when is_list(v), do: nil
-  defp validate_type(k, _v, type = "accountCredential"), do: type_error_message(k, type)
+  defp validate_type(_k, v, _) when is_list(v), do: nil
+  defp validate_type(k, _v, type), do: type_error_message(k, type)
 
   defp build_soap_body(wsdl, operation, params) do
     case params |> construct_xml_request_body |> validate_params(wsdl, operation) do
