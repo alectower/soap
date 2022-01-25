@@ -25,10 +25,16 @@ defmodule Soap.Response.Parser do
 
   def parse(xml_response, _response_type, version) do
     body_tag = get_body_tag(xml_response, version)
+    header_tag = get_header_tag(xml_response, version)
 
     xml_response
     |> xpath(~x"//#{body_tag}/*"l)
     |> parse_elements()
+    |> Map.merge(
+      xml_response
+      |> xpath(~x"//#{header_tag}/*"l)
+      |> parse_elements()
+    )
   end
 
   @spec parse_record(tuple()) :: map() | String.t()
@@ -93,6 +99,13 @@ defmodule Soap.Response.Parser do
     |> get_envelope_namespace(version)
     |> List.to_string()
     |> apply_namespace_to_tag("Fault")
+  end
+
+  defp get_header_tag(xml_response, version) do
+    xml_response
+    |> get_envelope_namespace(version)
+    |> List.to_string()
+    |> apply_namespace_to_tag("Header")
   end
 
   defp get_body_tag(xml_response, version) do
