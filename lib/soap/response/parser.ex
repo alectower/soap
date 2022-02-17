@@ -30,11 +30,12 @@ defmodule Soap.Response.Parser do
     xml_response
     |> xpath(~x"//#{body_tag}/*"l)
     |> parse_elements()
-    |> Map.merge(
-      xml_response
-      |> xpath(~x"//#{header_tag}/*"l)
-      |> parse_elements()
-    )
+    |> Map.merge(%{
+      header:
+        xml_response
+        |> xpath(~x"//#{header_tag}/*"l)
+        |> parse_elements()
+    })
   end
 
   @spec parse_record(tuple()) :: map() | String.t()
