@@ -205,10 +205,16 @@ defmodule Soap.Request.Params do
       |> prepare_action_tag(operation)
 
     action_tag =
-      case String.starts_with?(action_tag, "tns") do
-        true -> action_tag
+      cond do
+        wsdl[:prefix_action_namespace] == "false" || wsdl[:prefix_action_namespace] == false ->
+          String.replace(action_tag, "tns:", "")
 
-        false -> "tns:#{action_tag}"
+        true ->
+          case String.starts_with?(action_tag, "tns") do
+            true -> action_tag
+
+            false -> "tns:#{action_tag}"
+          end
       end
 
     [element(action_tag, action_tag_attributes, body)]
