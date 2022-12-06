@@ -39,7 +39,7 @@ defmodule Soap.Response.Parser do
   end
 
   @spec parse_record(tuple()) :: map() | String.t()
-  defp parse_record({:xmlElement, tag_name, _, _, _, _, _, attributes, elements, _, _, _} = record) do
+  defp parse_record({:xmlElement, tag_name, _, _, _, _, _, attributes, elements, _, _, _}) do
     %{tag_name => %{attributes: parse_elements(attributes), value: parse_elements(elements)}}
   end
 
