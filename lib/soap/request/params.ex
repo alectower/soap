@@ -40,7 +40,16 @@ defmodule Soap.Request.Params do
   def validate_params(params, wsdl, operation) do
     errors =
       params
-      |> Enum.map(&validate_param(&1, wsdl, operation))
+      |> Enum.map(fn param ->
+        case param do
+          {k, v} -> validate_param({k, v}, wsdl, operation)
+
+
+          {k, a, v} ->
+            List.flatten(validate_param({k, v}, wsdl, operation)
+            ++ Enum.map(a, fn p -> validate_param(p, wsdl, operation) end))
+        end
+      end)
 
     case Enum.any?(errors) do
       true ->
@@ -53,7 +62,7 @@ defmodule Soap.Request.Params do
 
   @spec validate_param(param :: tuple(), wsdl :: map(), operation :: String.t()) :: String.t() | nil
   defp validate_param(param, wsdl, operation) do
-    {k, _, v} = param
+    {k, v} = param
 
     case val_map = wsdl.validation_types[String.downcase(operation)] do
       nil ->
@@ -161,7 +170,6 @@ defmodule Soap.Request.Params do
     params
     |> Tuple.to_list()
     |> Enum.map(&construct_xml_request_body/1)
-    |> insert_tag_parameters
     |> List.to_tuple()
   end
 
