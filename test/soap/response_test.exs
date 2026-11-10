@@ -12,22 +12,51 @@ defmodule Soap.ResponseTest do
       status_code: 200
     }
 
-    correctly_parsed_response = %{response: %{message: "Hello!"}}
+    correctly_parsed_response = %{
+      header: %{},
+      response: %{
+        attributes: %{},
+        value: %{
+          message: %{
+            attributes: %{},
+            value: "Hello!"
+          }
+        }
+      }
+    }
 
     assert Response.parse(response) == correctly_parsed_response
   end
 
   test "#Soap.Response.parse/2, when request was successful" do
     xml_body = Fixtures.load_xml("send_service/SendMessageResponse.xml")
-    correctly_parsed_response = %{response: %{message: "Hello!"}}
+
+    correctly_parsed_response = %{
+      header: %{},
+      response: %{
+        attributes: %{},
+        value: %{
+          message: %{
+            attributes: %{},
+            value: "Hello!"
+          }
+        }
+      }
+    }
 
     assert Response.parse(xml_body, 200) == correctly_parsed_response
   end
 
   test "#Soap.Response.parse/2, when response contains fault" do
     parsed_fault = %{
-      faultcode: "soap:Server",
-      faultstring: "System.Web.Services.Protocols.SoapException: Server was unable to process request."
+      faultcode: %{
+        attributes: %{},
+        value: "soap:Server"
+      },
+      faultstring: %{
+        attributes: %{},
+        value: "System.Web.Services.Protocols.SoapException: Server was unable to process request."
+      }
     }
 
     fault_xml = Fixtures.load_xml("send_service/SendMessageFault.xml")

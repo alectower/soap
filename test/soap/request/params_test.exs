@@ -53,4 +53,24 @@ defmodule Soap.Request.ParamsTest do
              "Element date has wrong format. Expects [0-9]{4}-[0-9]{2}-[0-9]{2} format."
            ]
   end
+
+  test "#build_body supports inline anonymous complexType elements and missing complex_types entries" do
+    wsdl_path = Fixtures.get_file_path("wsdl/RootNamespace.wsdl")
+    {:ok, wsdl} = Wsdl.parse_from_file(wsdl_path)
+
+    inline_result = Params.build_body(wsdl, "TradePriceRequest", %{tickerSymbol: "AAPL"}, nil)
+
+    assert inline_result ==
+             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" <>
+               "<env:Envelope xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\" " <>
+               "xmlns:tns=\"http://example.com/stockquote.xsd\" " <>
+               "xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" " <>
+               "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">" <>
+               "<env:Header/>" <>
+               "<env:Body><tns:TradePriceRequest><tickerSymbol>AAPL</tickerSymbol></tns:TradePriceRequest></env:Body>" <>
+               "</env:Envelope>"
+
+    missing_op_result = Params.build_body(wsdl, "GetLastTradePrice", %{tickerSymbol: "AAPL"}, nil)
+    assert String.contains?(missing_op_result, "<tns:GetLastTradePrice><tickerSymbol>AAPL</tickerSymbol></tns:GetLastTradePrice>")
+  end
 end

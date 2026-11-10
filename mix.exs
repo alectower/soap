@@ -5,7 +5,7 @@ defmodule Soap.MixProject do
     [
       app: :soap,
       version: "1.0.1",
-      elixir: "~> 1.4",
+      elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),

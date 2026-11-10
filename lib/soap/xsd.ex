@@ -37,7 +37,7 @@ defmodule Soap.Xsd do
   defp parse_xsd(xsd) do
     parsed_response = %{
       simple_types: get_simple_types(xsd),
-      complex_types: Type.get_complex_types(xsd, "//xsd:schema/xsd:complexType")
+      complex_types: Type.get_complex_types(xsd, "//*[local-name() = 'schema']/*[local-name() = 'complexType']")
     }
 
     {:ok, parsed_response}
@@ -47,26 +47,26 @@ defmodule Soap.Xsd do
   defp get_simple_types(wsdl) do
     wsdl
     |> xpath(
-      ~x"//xsd:schema/xsd:simpleType"l,
+      ~x"//*[local-name() = 'schema']/*[local-name() = 'simpleType']"l,
       name: ~x"./@name"s,
       restriction: [
-        ~x"./xsd:restriction"o,
+        ~x"./*[local-name() = 'restriction']"o,
         base: ~x"./@base"s,
-        min_inclusive: ~x"./xsd:minInclusive/@value"io,
-        max_inclusive: ~x"./xsd:maxInclusive/@value"io,
-        max_length: ~x"./xsd:maxLength/@value"io,
-        total_digits: ~x"./xsd:totalDigits/@value"io,
-        fraction_digits: ~x"./xsd:fractionDigits/@value"io,
-        pattern: ~x"./xsd:pattern/@value"so,
-        enumeration: ~x"./xsd:enumeration/@value"lso
+        min_inclusive: ~x"./*[local-name() = 'minInclusive']/@value"io,
+        max_inclusive: ~x"./*[local-name() = 'maxInclusive']/@value"io,
+        max_length: ~x"./*[local-name() = 'maxLength']/@value"io,
+        total_digits: ~x"./*[local-name() = 'totalDigits']/@value"io,
+        fraction_digits: ~x"./*[local-name() = 'fractionDigits']/@value"io,
+        pattern: ~x"./*[local-name() = 'pattern']/@value"so,
+        enumeration: ~x"./*[local-name() = 'enumeration']/@value"lso
       ],
       list: [
-        ~x"./xsd:list"o,
+        ~x"./*[local-name() = 'list']"o,
         item_type: ~x"./@itemType"s
       ],
       union: [
-        ~x"./xsd:union"o,
-        types: ~x"./xsd:simpleType/xsd:restriction/@base"lo
+        ~x"./*[local-name() = 'union']"o,
+        types: ~x"./*[local-name() = 'simpleType']/*[local-name() = 'restriction']/@base"lo
       ]
     )
   end

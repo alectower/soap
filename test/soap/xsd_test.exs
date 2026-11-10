@@ -44,4 +44,29 @@ defmodule Soap.XsdTest do
       assert Xsd.parse("https://example.com") == {:error, :forbidden}
     end
   end
+
+  test "#parse supports xs: prefix for simpleType and complexType definitions" do
+    xs_xsd = """
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:simpleType name="StatusType">
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="ACTIVE"/>
+          <xs:enumeration value="INACTIVE"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:complexType name="ItemType">
+        <xs:sequence>
+          <xs:element name="code" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+    </xs:schema>
+    """
+
+    with_mock HTTPoison, get: fn _, _, _ -> {:ok, %HTTPoison.Response{body: xs_xsd, status_code: 200}} end do
+      {:ok, parsed} = Xsd.parse("https://example.com/schema.xsd")
+
+      assert parsed.complex_types == %{"itemtype" => %{"code" => %{type: "xs:string"}}}
+      assert [%{name: "StatusType", restriction: %{base: "xs:string", enumeration: ["ACTIVE", "INACTIVE"]}}] = parsed.simple_types
+    end
+  end
 end

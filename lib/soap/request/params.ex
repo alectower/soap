@@ -84,7 +84,7 @@ defmodule Soap.Request.Params do
     attributes = val_map[k]
     [_, type] = String.split(attributes.type, ":")
 
-    case type != "string" && !is_list(v) && Integer.parse(v) do
+    case type != "string" && is_binary(v) && Integer.parse(v) do
       {number, ""} -> validate_type(k, number, type)
       _ -> validate_type(k, v, type)
     end
@@ -130,6 +130,7 @@ defmodule Soap.Request.Params do
       validated_params ->
         body =
           validated_params
+          |> stringify_values
           |> add_action_tag_wrapper(wsdl, operation)
           |> add_body_tag_wrapper
 
@@ -173,9 +174,21 @@ defmodule Soap.Request.Params do
     |> List.to_tuple()
   end
 
-  @spec construct_xml_request_body(params :: String.t() | atom() | number()) :: String.t()
-  defp construct_xml_request_body(params) when is_atom(params) or is_number(params), do: params |> to_string
-  defp construct_xml_request_body(params) when is_binary(params), do: params
+  @spec construct_xml_request_body(params :: String.t() | atom() | number()) :: String.t() | number()
+  defp construct_xml_request_body(params) when is_atom(params), do: params |> to_string
+  defp construct_xml_request_body(params) when is_binary(params) or is_number(params), do: params
+
+  defp stringify_values(params) when is_list(params), do: Enum.map(params, &stringify_values/1)
+
+  defp stringify_values(params) when is_tuple(params) do
+    params
+    |> Tuple.to_list()
+    |> Enum.map(&stringify_values/1)
+    |> List.to_tuple()
+  end
+
+  defp stringify_values(params) when is_number(params), do: to_string(params)
+  defp stringify_values(params), do: params
 
   @spec construct_xml_request_header(params :: map() | list()) :: list()
   defp construct_xml_request_header(params) when is_map(params) or is_list(params) do
@@ -280,10 +293,14 @@ defmodule Soap.Request.Params do
   defp handle_action_extractor_result(nil, wsdl, operation) do
     wsdl[:complex_types]
     |> Enum.find(fn x -> Macro.camelize(x[:name]) == operation end)
-    |> Map.get(:type)
+    |> case do
+      nil -> ""
+      result -> handle_action_extractor_result(result, wsdl, operation)
+    end
   end
 
-  defp handle_action_extractor_result(result, _wsdl, _operation), do: Map.get(result, :type)
+  defp handle_action_extractor_result(%{type: ""} = result, _wsdl, _operation), do: Map.get(result, :name, "")
+  defp handle_action_extractor_result(result, _wsdl, _operation), do: Map.get(result, :type, "")
 
   @spec get_action_namespace(wsdl :: map(), operation :: String.t()) :: String.t()
   defp get_action_namespace(wsdl, operation) do

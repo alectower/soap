@@ -294,4 +294,57 @@ defmodule Soap.WsdlTest do
     wsdl_path = Fixtures.get_file_path("wsdl/SoapHeader.wsdl")
     assert(Wsdl.parse_from_file(wsdl_path) == {:ok, @parsed_soap_headers_wsdl})
   end
+
+  test "supports scoped xs:schema prefix, multiple schemas, empty soapAction, and import without schemaLocation" do
+    wsdl = """
+    <?xml version="1.0" encoding="utf-8"?>
+    <wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                      xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                      xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/"
+                      xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                      xmlns:tns="http://example.com/cb"
+                      targetNamespace="http://example.com/cb">
+      <wsdl:types>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                   targetNamespace="http://www.w3.org/1999/xlink"/>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                   targetNamespace="http://example.com/cb"
+                   elementFormDefault="qualified">
+          <xs:import namespace="http://www.w3.org/1999/xlink"/>
+          <xs:element name="PingURL" type="tns:PingURL"/>
+          <xs:complexType name="PingURL">
+            <xs:sequence>
+              <xs:element name="message" type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:schema>
+      </wsdl:types>
+      <wsdl:binding name="CBSoap" type="tns:CBSoap">
+        <wsdl:operation name="PingURL">
+          <soap:operation soapAction="" style="document"/>
+          <wsdl:input><soap:body use="literal"/></wsdl:input>
+        </wsdl:operation>
+      </wsdl:binding>
+      <wsdl:binding name="CBSoap12" type="tns:CBSoap">
+        <wsdl:operation name="PingURL12">
+          <soap12:operation soapAction="" style="document"/>
+          <wsdl:input><soap12:body use="literal"/></wsdl:input>
+        </wsdl:operation>
+      </wsdl:binding>
+    </wsdl:definitions>
+    """
+
+    {:ok, parsed} = Wsdl.parse(wsdl, "cb.wsdl")
+
+    assert parsed.schema_attributes == %{
+             element_form_default: "qualified",
+             target_namespace: "http://example.com/cb"
+           }
+
+    assert parsed.complex_types == [%{name: "PingURL", type: "tns:PingURL"}]
+    assert parsed.validation_types == %{"pingurl" => %{"message" => %{minOccurs: "0", type: "xs:string"}}}
+    assert parsed.operations == [
+             %{name: "PingURL", soap_action: "", input: %{body: nil, header: nil}}
+           ]
+  end
 end

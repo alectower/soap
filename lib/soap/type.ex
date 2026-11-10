@@ -14,9 +14,20 @@ defmodule Soap.Type do
 
   @spec parse_types(map(), map()) :: map()
   defp parse_types(type_node, complex_type_acc) do
+    direct_elements =
+      xpath(
+        type_node,
+        ~x"./*[local-name() = 'sequence' or local-name() = 'all' or local-name() = 'choice']/*[local-name() = 'element']"l
+      )
+
+    extension_elements =
+      xpath(
+        type_node,
+        ~x"./*[local-name() = 'complexContent']/*[local-name() = 'extension']/*[local-name() = 'sequence' or local-name() = 'all' or local-name() = 'choice']/*[local-name() = 'element']"l
+      )
+
     types_map =
-      type_node
-      |> xpath(~x"./xsd:sequence/xsd:element"l)
+      (direct_elements ++ extension_elements)
       |> Enum.reduce(%{}, &parse_type_attributes/2)
 
     Map.put(complex_type_acc, type_node |> xpath(~x"./@name"s) |> String.downcase(), types_map)

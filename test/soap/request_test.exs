@@ -8,12 +8,12 @@ defmodule Soap.RequestTest do
                        <?xml version="1.0" encoding="UTF-8"?>
                        <env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="http://test.com" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                          <env:Header>
-                            <Authentication xmlns="http://test.com">
+                            <Authentication>
                                <token>barbaz</token>
                             </Authentication>
                          </env:Header>
                          <env:Body>
-                           <tns:sayHello xmlns="http://test.com">
+                           <tns:sayHello>
                              <body>Hello John</body>
                            </tns:sayHello>
                          </env:Body>

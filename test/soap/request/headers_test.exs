@@ -23,6 +23,9 @@ defmodule Soap.Request.HeadersTest do
     {_, wsdl} = Wsdl.parse_from_file(@wsdl_path)
     function_result = Headers.build(wsdl, @operation, custom_parameters)
 
-    assert function_result == custom_parameters
+    assert function_result == [
+             {"Content-Type", "text/xml;charset=utf-8"},
+             {"SOAPAction", "AnotherAction"}
+           ]
   end
 end

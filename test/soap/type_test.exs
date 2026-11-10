@@ -47,4 +47,34 @@ defmodule Soap.TypeTest do
     {:ok, wsdl} = File.read(wsdl_path)
     assert(Type.get_complex_types(wsdl, "//wsdl:types/xsd:schema/xsd:complexType") == @complex_types)
   end
+
+  test "#get_complex_types supports xs: prefix, all, choice, and complexContent extension" do
+    xsd = """
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://example.com/ns">
+      <xs:complexType name="AllType">
+        <xs:all>
+          <xs:element name="first" type="xs:string" minOccurs="0"/>
+        </xs:all>
+      </xs:complexType>
+      <xs:complexType name="ExtendedType">
+        <xs:complexContent>
+          <xs:extension base="tns:BaseType">
+            <xs:sequence>
+              <xs:element name="extField" type="xs:int" maxOccurs="1"/>
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+    </xs:schema>
+    """
+
+    assert Type.get_complex_types(xsd, "//*[local-name() = 'schema']/*[local-name() = 'complexType']") == %{
+             "alltype" => %{
+               "first" => %{minOccurs: "0", type: "xs:string"}
+             },
+             "extendedtype" => %{
+               "extField" => %{maxOccurs: "1", type: "xs:int"}
+             }
+           }
+  end
 end
