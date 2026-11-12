@@ -73,4 +73,61 @@ defmodule Soap.Request.ParamsTest do
     missing_op_result = Params.build_body(wsdl, "GetLastTradePrice", %{tickerSymbol: "AAPL"}, nil)
     assert String.contains?(missing_op_result, "<tns:GetLastTradePrice><tickerSymbol>AAPL</tickerSymbol></tns:GetLastTradePrice>")
   end
+
+  test "#build_body uses message parameters part element when RequestWrapper is specified" do
+    wsdl = %{
+      namespaces: %{
+        "tns" => %{value: "http://www.multispeak.org/V5.0/wsdl/CB_Server", type: :wsdl},
+        "env" => %{value: "http://www.w3.org/2003/05/soap-envelope", type: :soap}
+      },
+      soap_version: "1.2",
+      schema_attributes: %{},
+      complex_types: [
+        %{name: "GetCustomersByContactInfo", type: ""},
+        %{name: "GetCustomersByContactInfoRequestWrapper", type: "tns:GetCustomersByContactInfoRequestWrapper"}
+      ],
+      operations: [
+        %{
+          name: "GetCustomersByContactInfo",
+          soap_action: "http://www.multispeak.org/Version_5.0_Release/GetCustomersByContactInfo",
+          input: %{body: nil, header: nil}
+        }
+      ],
+      messages: [
+        %{
+          name: "GetCustomersByContactInfo",
+          parts: [
+            %{name: "parameters", element: "tns:GetCustomersByContactInfoRequestWrapper"}
+          ]
+        }
+      ],
+      validation_types: %{
+        "getcustomersbycontactinforequestwrapper" => %{
+          "ArrayOfContactInfoReferable" => %{minOccurs: "0", type: "ns3:ArrayOfContactInfoReferable"},
+          "lastReceived" => %{minOccurs: "0", type: "xs:string"}
+        }
+      }
+    }
+
+    body =
+      Params.build_body(
+        wsdl,
+        "GetCustomersByContactInfo",
+        [ArrayOfContactInfoReferable: [contactInfoReferable: [address1: "123 Main St"]]],
+        %{}
+      )
+
+    assert String.contains?(body, "<tns:GetCustomersByContactInfoRequestWrapper>")
+    refute String.contains?(body, "<tns:GetCustomersByContactInfo>")
+
+    invalid =
+      Params.build_body(
+        wsdl,
+        "GetCustomersByContactInfo",
+        [lastReceived: 123],
+        %{}
+      )
+
+    assert invalid == ["Element lastReceived has wrong type. Expects string type."]
+  end
 end

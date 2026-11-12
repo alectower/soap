@@ -64,7 +64,7 @@ defmodule Soap.Request.Params do
   defp validate_param(param, wsdl, operation) do
     {k, v} = param
 
-    case val_map = wsdl.validation_types[String.downcase(operation)] do
+    case val_map = get_validation_type(wsdl, operation) do
       nil ->
         nil
 
@@ -259,16 +259,55 @@ defmodule Soap.Request.Params do
   defp prepare_action_tag("", operation), do: operation
   defp prepare_action_tag(action_tag, _operation), do: action_tag
 
+  defp get_validation_type(wsdl, operation) do
+    val_types = wsdl[:validation_types] || %{}
+
+    case Map.get(val_types, String.downcase(operation)) do
+      nil ->
+        action_type =
+          wsdl
+          |> get_action_with_namespace(operation)
+          |> String.replace(~r/^.*:/, "")
+          |> String.downcase()
+
+        Map.get(val_types, action_type)
+
+      val_map ->
+        val_map
+    end
+  end
+
   @spec get_action_with_namespace(wsdl :: map(), operation :: String.t()) :: String.t()
   defp get_action_with_namespace(wsdl, operation) do
-    case wsdl[:complex_types] do
-      [] ->
-        ""
+    case get_body_with_namespace(wsdl, operation) do
+      nil ->
+        case wsdl[:complex_types] do
+          [] ->
+            ""
 
-      _ ->
-        wsdl[:complex_types]
-        |> Enum.find(fn x -> x[:name] == operation end)
-        |> handle_action_extractor_result(wsdl, operation)
+          _ ->
+            wsdl[:complex_types]
+            |> Enum.find(fn x -> x[:name] == operation end)
+            |> handle_action_extractor_result(wsdl, operation)
+        end
+
+      action_tag ->
+        action_tag
+    end
+  end
+
+  @spec get_body_with_namespace(wsdl :: map(), operation :: String.t()) :: String.t() | nil
+  defp get_body_with_namespace(wsdl, operation) do
+    with messages when is_list(messages) <- wsdl[:messages],
+         %{parts: parts} when is_list(parts) <-
+           Enum.find(messages, fn m ->
+             m[:name] == operation or Macro.camelize(m[:name]) == operation
+           end),
+         %{element: element} when is_binary(element) and element != "" <-
+           Enum.find(parts, &(&1[:name] == "parameters")) do
+      element
+    else
+      _ -> nil
     end
   end
 
