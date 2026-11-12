@@ -130,4 +130,143 @@ defmodule Soap.Request.ParamsTest do
 
     assert invalid == ["Element lastReceived has wrong type. Expects string type."]
   end
+
+  test "#build_body qualifies nested elements across schemas using custom_namespaces and tns" do
+    wsdl = %{
+      namespaces: %{
+        "tns" => %{value: "http://www.multispeak.org/V5.0/wsdl/CB_Server", type: :wsdl},
+        "env" => %{value: "http://www.w3.org/2003/05/soap-envelope", type: :soap}
+      },
+      custom_namespaces: [
+        {"xmlns:req", "http://www.multispeak.org/V5.0/ws/request"},
+        {"xmlns:com", "http://www.multispeak.org/V5.0/commonArrays"},
+        {"xmlns:com1", "http://www.multispeak.org/V5.0/commonTypes"},
+        {"xmlns:v5", "http://www.multispeak.org/V5.0"},
+        {"xmlns:cb", "http://www.multispeak.org/V5.0/wsdl/CB_Server"}
+      ],
+      soap_version: "1.2",
+      schema_attributes: %{
+        target_namespace: "http://www.multispeak.org/V5.0/wsdl/CB_Server",
+        element_form_default: "unqualified"
+      },
+      complex_types: [
+        %{name: "GetCustomersByContactInfo", type: ""},
+        %{name: "GetCustomersByContactInfoRequestWrapper", type: "tns:GetCustomersByContactInfoRequestWrapper"}
+      ],
+      operations: [
+        %{
+          name: "GetCustomersByContactInfo",
+          soap_action: "http://www.multispeak.org/Version_5.0_Release/GetCustomersByContactInfo",
+          input: %{body: nil, header: nil}
+        }
+      ],
+      messages: [
+        %{
+          name: "GetCustomersByContactInfo",
+          parts: [
+            %{name: "parameters", element: "tns:GetCustomersByContactInfoRequestWrapper"}
+          ]
+        }
+      ],
+      validation_types: %{
+        "getcustomersbycontactinforequestwrapper" => %{
+          "ArrayOfContactInfoReferable" => %{
+            minOccurs: "0",
+            namespace: "http://www.multispeak.org/V5.0/wsdl/CB_Server",
+            type: "ns3:ArrayOfContactInfoReferable"
+          }
+        },
+        "arrayofcontactinforeferable" => %{
+          "contactInfoReferable" => %{
+            maxOccurs: "unbounded",
+            minOccurs: "0",
+            nillable: "true",
+            namespace: "http://www.multispeak.org/V5.0/commonArrays",
+            type: "ns1:contactInfoReferable"
+          }
+        },
+        "contactinforeferable" => %{
+          "contactInfo" => %{
+            namespace: "http://www.multispeak.org/V5.0",
+            type: "tns:contactInfo"
+          }
+        },
+        "contactinfo" => %{
+          "addressItems" => %{
+            minOccurs: "0",
+            namespace: "http://www.multispeak.org/V5.0",
+            type: "ns1:addressItems"
+          }
+        },
+        "addressitems" => %{
+          "addressItem" => %{
+            maxOccurs: "unbounded",
+            namespace: "http://www.multispeak.org/V5.0/commonTypes",
+            type: "tns:addressItem"
+          }
+        },
+        "addressitem" => %{
+          "address" => %{
+            namespace: "http://www.multispeak.org/V5.0/commonTypes",
+            type: "tns:address"
+          }
+        },
+        "address" => %{
+          "address1" => %{
+            minOccurs: "0",
+            namespace: "http://www.multispeak.org/V5.0/commonTypes",
+            type: "xs:string"
+          },
+          "city" => %{
+            minOccurs: "0",
+            namespace: "http://www.multispeak.org/V5.0/commonTypes",
+            type: "xs:string"
+          }
+        }
+      }
+    }
+
+    body =
+      Params.build_body(
+        wsdl,
+        "GetCustomersByContactInfo",
+        [
+          ArrayOfContactInfoReferable: [
+            contactInfoReferable: [
+              contactInfo: [
+                addressItems: [
+                  addressItem: [
+                    address: [
+                      address1: "123 Main St",
+                      city: "Detroit"
+                    ]
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        %{}
+      )
+
+    assert String.contains?(
+             body,
+             "<tns:GetCustomersByContactInfoRequestWrapper>" <>
+               "<cb:ArrayOfContactInfoReferable>" <>
+               "<com:contactInfoReferable>" <>
+               "<v5:contactInfo>" <>
+               "<v5:addressItems>" <>
+               "<com1:addressItem>" <>
+               "<com1:address>" <>
+               "<com1:address1>123 Main St</com1:address1>" <>
+               "<com1:city>Detroit</com1:city>" <>
+               "</com1:address>" <>
+               "</com1:addressItem>" <>
+               "</v5:addressItems>" <>
+               "</v5:contactInfo>" <>
+               "</com:contactInfoReferable>" <>
+               "</cb:ArrayOfContactInfoReferable>" <>
+               "</tns:GetCustomersByContactInfoRequestWrapper>"
+           )
+  end
 end

@@ -69,12 +69,19 @@ defmodule Soap.Request.Params do
         nil
 
       _ ->
-        if Map.has_key?(val_map, k) do
-          validate_param_attributes(val_map, k, v)
-        else
-          "Invalid SOAP message:Invalid content was found starting with element '#{k}'. One of {#{
-            Enum.join(Map.keys(val_map), ", ")
-          }} is expected."
+        unprefixed_k = String.replace(k, ~r/^.*:/, "")
+
+        cond do
+          Map.has_key?(val_map, k) ->
+            validate_param_attributes(val_map, k, v)
+
+          Map.has_key?(val_map, unprefixed_k) ->
+            validate_param_attributes(val_map, unprefixed_k, v)
+
+          true ->
+            "Invalid SOAP message:Invalid content was found starting with element '#{k}'. One of {#{
+              Enum.join(Map.keys(val_map), ", ")
+            }} is expected."
         end
     end
   end
@@ -131,6 +138,7 @@ defmodule Soap.Request.Params do
         body =
           validated_params
           |> stringify_values
+          |> apply_element_namespaces(wsdl, operation)
           |> add_action_tag_wrapper(wsdl, operation)
           |> add_body_tag_wrapper
 
@@ -189,6 +197,94 @@ defmodule Soap.Request.Params do
 
   defp stringify_values(params) when is_number(params), do: to_string(params)
   defp stringify_values(params), do: params
+
+  defp apply_element_namespaces(params, wsdl, operation) when is_list(params) do
+    val_map = get_validation_type(wsdl, operation)
+    ns_prefixes = build_namespace_prefix_map(wsdl)
+    qualify_params(params, val_map, wsdl, ns_prefixes)
+  end
+
+  defp apply_element_namespaces(params, _wsdl, _operation), do: params
+
+  defp build_namespace_prefix_map(wsdl) do
+    tns_map =
+      case get_in(wsdl, [:schema_attributes, :target_namespace]) do
+        ns when is_binary(ns) and ns != "" -> %{ns => "tns"}
+        _ -> %{}
+      end
+
+    custom_ns =
+      custom_namespaces()
+      |> Map.merge(Map.get(wsdl, :custom_namespaces, []) |> Map.new())
+      |> Enum.reduce(%{}, fn {k, v}, acc ->
+        prefix = k |> to_string() |> String.replace_prefix("xmlns:", "")
+        Map.put(acc, v, prefix)
+      end)
+
+    Map.merge(tns_map, custom_ns)
+  end
+
+  defp qualify_params(params, val_map, wsdl, ns_prefixes) when is_list(params) do
+    Enum.map(params, &qualify_param(&1, val_map, wsdl, ns_prefixes))
+  end
+
+  defp qualify_param(param, val_map, wsdl, ns_prefixes) when is_list(param) do
+    qualify_params(param, val_map, wsdl, ns_prefixes)
+  end
+
+  defp qualify_param({k, v}, val_map, wsdl, ns_prefixes) when is_binary(k) do
+    unprefixed_k = String.replace(k, ~r/^.*:/, "")
+    el_attr = if is_map(val_map), do: Map.get(val_map, unprefixed_k), else: nil
+    qualified_k = qualify_key(k, el_attr, ns_prefixes)
+    child_val_map = child_validation_type(el_attr, wsdl)
+
+    {qualified_k, qualify_value(v, child_val_map, wsdl, ns_prefixes)}
+  end
+
+  defp qualify_param({k, attrs, v}, val_map, wsdl, ns_prefixes) when is_binary(k) do
+    unprefixed_k = String.replace(k, ~r/^.*:/, "")
+    el_attr = if is_map(val_map), do: Map.get(val_map, unprefixed_k), else: nil
+    qualified_k = qualify_key(k, el_attr, ns_prefixes)
+    child_val_map = child_validation_type(el_attr, wsdl)
+
+    {qualified_k, attrs, qualify_value(v, child_val_map, wsdl, ns_prefixes)}
+  end
+
+  defp qualify_param(param, _val_map, _wsdl, _ns_prefixes), do: param
+
+  defp qualify_value(v, child_val_map, wsdl, ns_prefixes) when is_list(v) do
+    qualify_params(v, child_val_map, wsdl, ns_prefixes)
+  end
+
+  defp qualify_value(v, _child_val_map, _wsdl, _ns_prefixes), do: v
+
+  defp qualify_key(k, el_attr, ns_prefixes) do
+    if String.contains?(k, ":") do
+      k
+    else
+      case el_attr do
+        %{namespace: ns} when is_binary(ns) and ns != "" ->
+          case Map.get(ns_prefixes, ns) do
+            prefix when is_binary(prefix) and prefix != "" -> "#{prefix}:#{k}"
+            _ -> k
+          end
+
+        _ ->
+          k
+      end
+    end
+  end
+
+  defp child_validation_type(%{type: type}, wsdl) when is_binary(type) and type != "" do
+    type_name =
+      type
+      |> String.replace(~r/^.*:/, "")
+      |> String.downcase()
+
+    get_in(wsdl, [:validation_types, type_name])
+  end
+
+  defp child_validation_type(_, _wsdl), do: nil
 
   @spec construct_xml_request_header(params :: map() | list()) :: list()
   defp construct_xml_request_header(params) when is_map(params) or is_list(params) do
