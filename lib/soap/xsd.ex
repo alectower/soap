@@ -33,17 +33,19 @@ defmodule Soap.Xsd do
     end
   end
 
-  @spec parse(String.t()) :: {:ok, map()}
+  @spec parse_xsd(String.t()) :: {:ok, map()}
   defp parse_xsd(xsd) do
+    doc = if is_binary(xsd), do: SweetXml.parse(xsd), else: xsd
+
     parsed_response = %{
-      simple_types: get_simple_types(xsd),
-      complex_types: Type.get_complex_types(xsd, "//*[local-name() = 'schema']/*[local-name() = 'complexType']")
+      simple_types: get_simple_types(doc),
+      complex_types: Type.get_complex_types(doc, "//*[local-name() = 'schema']/*[local-name() = 'complexType']")
     }
 
     {:ok, parsed_response}
   end
 
-  @spec get_simple_types(String.t()) :: list()
+  @spec get_simple_types(String.t() | tuple()) :: list()
   defp get_simple_types(wsdl) do
     wsdl
     |> xpath(

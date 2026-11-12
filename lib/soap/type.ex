@@ -5,13 +5,14 @@ defmodule Soap.Type do
 
   import SweetXml, except: [parse: 1]
 
-  @spec get_complex_types(String.t(), String.t()) :: list()
+  @spec get_complex_types(String.t() | tuple(), String.t()) :: map()
   def get_complex_types(wsdl, x_path) do
-    wsdl_target_ns = xpath(wsdl, ~x"//*[local-name() = 'definitions']/@targetNamespace"s)
+    doc = if is_binary(wsdl), do: SweetXml.parse(wsdl), else: wsdl
+    wsdl_target_ns = xpath(doc, ~x"//*[local-name() = 'definitions']/@targetNamespace"s)
 
-    case xpath(wsdl, ~x"//*[local-name() = 'schema']"l) do
+    case xpath(doc, ~x"//*[local-name() = 'schema']"l) do
       [] ->
-        wsdl
+        doc
         |> xpath(~x"#{x_path}"l)
         |> Enum.reduce(%{}, &parse_types(&1, &2, {"", "", wsdl_target_ns}))
 
